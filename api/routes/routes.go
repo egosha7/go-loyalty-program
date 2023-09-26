@@ -28,6 +28,13 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 				},
 			)
 
+			// Роут для регистрации пользователя
+			route.Post(
+				"/api/user/register", func(w http.ResponseWriter, r *http.Request) {
+					handlers.RegisterUser(w, r, conn)
+				},
+			)
+
 		},
 	)
 
