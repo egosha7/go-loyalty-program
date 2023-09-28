@@ -1,9 +1,9 @@
-package main
+package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v4"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 )
@@ -14,7 +14,7 @@ type User struct {
 	Password string `json:"password"`
 }
 
-func RegisterHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB) {
+func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Парсинг JSON-данных из запроса
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -23,10 +23,16 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB) {
 		return
 	}
 
+	// Проверка наличия обязательных полей в запросе
+	if user.Login == "" || user.Password == "" {
+		http.Error(w, "Неверный формат запроса", http.StatusBadRequest)
+		return
+	}
+
 	// Проверка, что логин уникальный
 	var existingUser string
-	err = conn.QueryRowContext(r.Context(), "SELECT login FROM users WHERE login = $1", user.Login).Scan(&existingUser)
-	if err != nil && err != sql.ErrNoRows {
+	err = conn.QueryRow(r.Context(), "SELECT login FROM users WHERE login = $1", user.Login).Scan(&existingUser)
+	if err != nil && err != pgx.ErrNoRows {
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
 		return
 	}
@@ -43,7 +49,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB) {
 	}
 
 	// Вставка нового пользователя в базу данных
-	_, err = conn.ExecContext(r.Context(), "INSERT INTO users (login, password) VALUES ($1, $2)", user.Login, hashedPassword)
+	_, err = conn.Exec(r.Context(), "INSERT INTO users (login, password) VALUES ($1, $2)", user.Login, hashedPassword)
 	if err != nil {
 		http.Error(w, "Ошибка при добавлении пользователя в базу данных", http.StatusInternalServerError)
 		return
@@ -52,4 +58,50 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request, conn *sql.DB) {
 	// Ответ клиенту
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "Пользователь %s успешно зарегистрирован", user.Login)
+}
+
+func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+	// Парсинг JSON-данных из запроса
+	var user User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Ошибка при разборе JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Проверка наличия обязательных полей в запросе
+	if user.Login == "" || user.Password == "" {
+		http.Error(w, "Неверный формат запроса", http.StatusBadRequest)
+		return
+	}
+
+	// Получение хэшированного пароля из базы данных по логину
+	var hashedPassword string
+	err = conn.QueryRow(r.Context(), "SELECT password FROM users WHERE login = $1", user.Login).Scan(&hashedPassword)
+	if err == pgx.ErrNoRows {
+		http.Error(w, "Неверная пара логин/пароль", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
+		return
+	}
+
+	// Проверка пароля
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(user.Password))
+	if err != nil {
+		http.Error(w, "Неверная пара логин/пароль", http.StatusUnauthorized)
+		return
+	}
+
+	// В случае успешной аутентификации вы можете отправить куки или токен для аутентифицированного пользователя
+	// Ниже приведен пример установки куки
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth",
+		Value:    user.Login, // Используйте логин пользователя как идентификатор
+		HttpOnly: true,
+	})
+
+	// Ответ клиенту
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Пользователь %s успешно аутентифицирован", user.Login)
 }

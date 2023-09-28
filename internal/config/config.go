@@ -5,7 +5,6 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
-	"net"
 )
 
 // Config - структура конфигурации приложения
@@ -19,7 +18,7 @@ type Config struct {
 func Default() *Config {
 	return &Config{
 		Addr:              "localhost:8080",
-		DataBaseURI:       "postgres://postgres:egosha@localhost:5432/loyaltydb",
+		DataBaseURI:       "postgres://postgres:egor@localhost:5432/loyalty",
 		AccrualSystemAddr: "http://localhost:8081",
 	}
 }
@@ -41,14 +40,6 @@ func OnFlag(logger *zap.Logger) *Config {
 	// Парсинг переменных окружения в структуру Config
 	if err := env.Parse(&config); err != nil {
 		logger.Error("Ошибка при парсинге переменных окружения", zap.Error(err))
-	}
-
-	// Проверка корректности введенных значений флагов
-	if _, _, err := net.SplitHostPort(config.Addr); err != nil {
-		panic(err)
-	}
-	if _, _, err := net.SplitHostPort(config.AccrualSystemAddr); err != nil {
-		panic(err)
 	}
 
 	return &config

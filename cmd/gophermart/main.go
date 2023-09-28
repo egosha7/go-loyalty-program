@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	routes "github.com/egosha7/go-loyalty-program.git/api/routes"
 	"github.com/egosha7/go-loyalty-program.git/internal/config"
 	"github.com/egosha7/go-loyalty-program.git/internal/db"
 	"github.com/egosha7/go-loyalty-program.git/internal/loger"
+	"github.com/egosha7/go-loyalty-program.git/internal/routes"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
