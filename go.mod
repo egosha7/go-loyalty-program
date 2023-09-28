@@ -1,6 +1,6 @@
 module github.com/egosha7/go-loyalty-program.git
 
-go 1.21.1
+go 1.20
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1
