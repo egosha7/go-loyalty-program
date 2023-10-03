@@ -42,9 +42,9 @@ func isLuhnValid(number string) bool {
 }
 
 type AccrualResponse struct {
-	Order   string `json:"order"`
-	Status  string `json:"status"`
-	Accrual int    `json:"accrual,omitempty"`
+	Order   string  `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float64 `json:"accrual,omitempty"`
 }
 
 func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*AccrualResponse, error) {
