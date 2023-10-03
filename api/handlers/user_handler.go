@@ -17,14 +17,6 @@ type User struct {
 
 func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger *zap.Logger) {
 	// Парсинг JSON-данных из запроса
-	var user User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		logger.Error("Ошибка при разборе JSON", zap.Error(err))
-		http.Error(w, "Ошибка при разборе JSON", http.StatusBadRequest)
-		return
-	}
-
 	// Запрос для получения списка таблиц
 	query := `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`
 
@@ -35,7 +27,6 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 		return
 	}
 	defer rows.Close()
-
 	// Считывание и вывод списка таблиц
 	var tableName string
 	for rows.Next() {
@@ -48,6 +39,14 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 
 	if err := rows.Err(); err != nil {
 		logger.Error("Ошибка при чтении строк результата", zap.Error(err))
+		return
+	}
+
+	var user User
+	err = json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		logger.Error("Ошибка при разборе JSON", zap.Error(err))
+		http.Error(w, "Ошибка при разборе JSON", http.StatusBadRequest)
 		return
 	}
 
@@ -94,7 +93,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 	// Ответ клиенту
 	w.WriteHeader(http.StatusCreated)
 	logger.Info("Пользователь успешно зарегистрирован", zap.String("login", user.Login))
-	fmt.Fprintf(w, "Пользователь %s успешно зарегистрирован", user.Login)
+	fmt.Fprintf(w, "Пользователь %s успешно аутентифицирован", user.Login)
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
