@@ -42,5 +42,7 @@ func OnFlag(logger *zap.Logger) *Config {
 		logger.Error("Ошибка при парсинге переменных окружения", zap.Error(err))
 	}
 
+	logger.Info("Программа запущенна", zap.String("Addr", config.Addr), zap.String("DataBaseURI", config.DataBaseURI), zap.String("AccrualSystemAddr", config.AccrualSystemAddr))
+
 	return &config
 }
