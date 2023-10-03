@@ -22,8 +22,8 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logg
 	username := cookie.Value
 
 	// Запрос баланса пользователя
-	var currentBalance int
-	var totalWithdrawn int
+	var currentBalance float64
+	var totalWithdrawn float64
 
 	// Запрос текущего баланса из таблицы loyalty_balance
 	err = conn.QueryRow(r.Context(), "SELECT points FROM loyalty_balance WHERE user_id = (SELECT user_id FROM users WHERE login = $1)", username).Scan(&currentBalance)
@@ -43,8 +43,8 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logg
 
 	// Формирование ответа
 	balanceData := struct {
-		Current   int `json:"current"`
-		Withdrawn int `json:"withdrawn"`
+		Current   float64 `json:"current"`
+		Withdrawn float64 `json:"withdrawn"`
 	}{
 		Current:   currentBalance,
 		Withdrawn: totalWithdrawn,
@@ -78,8 +78,8 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 
 	// Парсинг JSON-запроса
 	var withdrawRequest struct {
-		Order string `json:"order"`
-		Sum   int    `json:"sum"`
+		Order string  `json:"order"`
+		Sum   float64 `json:"sum"`
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&withdrawRequest)
@@ -105,7 +105,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 	}
 
 	// Проверка на наличие достаточного баланса для списания
-	var currentBalance int
+	var currentBalance float64
 	err = conn.QueryRow(r.Context(), "SELECT points FROM loyalty_balance WHERE user_id = (SELECT user_id FROM users WHERE login = $1)", username).Scan(&currentBalance)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
@@ -166,15 +166,15 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, 
 
 	// Создание списка для хранения данных о списаниях
 	var withdrawals []struct {
-		Order       string `json:"order"`
-		Sum         int    `json:"sum"`
-		ProcessedAt string `json:"processed_at"`
+		Order       string  `json:"order"`
+		Sum         float64 `json:"sum"`
+		ProcessedAt string  `json:"processed_at"`
 	}
 
 	// Итерация по результатам запроса и добавление их в список withdrawals
 	for rows.Next() {
 		var orderID string
-		var withdrawnPoints int
+		var withdrawnPoints float64
 		var withdrawnTime time.Time
 
 		err := rows.Scan(&orderID, &withdrawnPoints, &withdrawnTime)
@@ -188,9 +188,9 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, 
 		timeStr := withdrawnTime.Format(time.RFC3339)
 
 		withdrawal := struct {
-			Order       string `json:"order"`
-			Sum         int    `json:"sum"`
-			ProcessedAt string `json:"processed_at"`
+			Order       string  `json:"order"`
+			Sum         float64 `json:"sum"`
+			ProcessedAt string  `json:"processed_at"`
 		}{
 			Order:       orderID,
 			Sum:         withdrawnPoints,
