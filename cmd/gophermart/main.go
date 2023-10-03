@@ -30,6 +30,20 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
+	exists, err := db.CheckDatabaseExists(conn, logger)
+	if err != nil {
+		logger.Fatal("Ошибка при проверке наличия базы данных", zap.Error(err))
+	}
+
+	if !exists {
+		// Если базы данных нет, восстановить ее из резервной копии
+		err := db.RestoreDatabase()
+		if err != nil {
+			logger.Fatal("Ошибка при восстановлении базы данных из резервной копии", zap.Error(err))
+		}
+		logger.Info("База данных восстановлена из резервной копии")
+	}
+
 	r := routes.SetupRoutes(cfg, conn, logger)
 
 	// Запуск сервера
