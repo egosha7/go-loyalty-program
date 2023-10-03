@@ -167,7 +167,7 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 		logger.Info("Данные от системы", zap.String("accrualResponse.Accrual", fmt.Sprintf("%.2f", accrualResponse.Accrual)), zap.String("accrualResponse.Status", accrualResponse.Status))
 	} else {
 		// Не используем accrualResponse если он равен nil
-		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, timestamp) VALUES ($1, $2, $3, $4)",
+		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, timestamp) VALUES ($1, $2, $3)",
 			orderNumber, userID, currentTime.Format(time.RFC3339))
 		if err != nil {
 			logger.Error("Ошибка при добавлении номера заказа в базу данных", zap.Error(err))
