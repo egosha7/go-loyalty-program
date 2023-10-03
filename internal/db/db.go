@@ -2,12 +2,11 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"github.com/egosha7/go-loyalty-program.git/internal/config"
 	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"net/http"
-	"os"
-	"os/exec"
 )
 
 func ConnectToDB(cfg *config.Config) (*pgx.Conn, error) {
@@ -40,25 +39,60 @@ func PingDB(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Путь к файлу резервной копии
-const backupFilePath = "SQL.sql"
-const dbName = "loyalty"
+func Check(logger *zap.Logger, conn *pgx.Conn) {
+	// Проверка существования таблиц и создание их при необходимости
+	tables := []struct {
+		name      string
+		createSQL string
+	}{
+		{"users", `
+			CREATE TABLE IF NOT EXISTS users (
+				user_id serial PRIMARY KEY,
+				login text,
+				password text
+			);
+		`},
+		{"orders", `
+			CREATE TABLE IF NOT EXISTS orders (
+				order_id serial PRIMARY KEY,
+				user_id integer REFERENCES users (user_id),
+				order_status text,
+				order_number text,
+				"timestamp" timestamptz
+			);
+		`},
+		{"loyalty_withdrawals", `
+			CREATE TABLE IF NOT EXISTS loyalty_withdrawals (
+				withdrawal_id serial PRIMARY KEY,
+				user_id integer REFERENCES users (user_id),
+				order_id integer REFERENCES orders (order_id),
+				withdrawn_points integer
+			);
+		`},
 
-// Функция для проверки наличия базы данных
-func CheckDatabaseExists(conn *pgx.Conn, logger *zap.Logger) (bool, error) {
-	var exists bool
-	err := conn.QueryRow(context.Background(), "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1)", dbName).Scan(&exists)
-	if err != nil {
-		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
-		return false, err
+		{"loyalty_balance", `
+			CREATE TABLE IF NOT EXISTS loyalty_balance (
+				loyalty_id serial PRIMARY KEY,
+				user_id integer REFERENCES users (user_id),
+				points integer
+			);
+		`},
 	}
-	return exists, nil
+
+	for _, table := range tables {
+		err := createTableIfNotExists(conn, table.createSQL)
+		if err != nil {
+			logger.Error("Ошибка запроса на создание таблицы "+table.name, zap.Error(err))
+		} else {
+			logger.Info("Создана таблица " + table.name)
+		}
+	}
+
+	fmt.Println("Таблицы успешно созданы или уже существуют.")
 }
 
-// Функция для восстановления базы данных из резервной копии
-func RestoreDatabase() error {
-	cmd := exec.Command("psql", "-U", "ваше_имя_пользователя", "-d", "ваша_база_данных", "-f", backupFilePath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+// createTableIfNotExists создает таблицу, если она не существует
+func createTableIfNotExists(conn *pgx.Conn, createSQL string) error {
+	_, err := conn.Exec(context.Background(), createSQL)
+	return err
 }
