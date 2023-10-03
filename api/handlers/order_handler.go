@@ -148,7 +148,7 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 	currentTime := time.Now()
 
 	if accrualResponse != nil {
-		// Используем accrualResponse только если он не равен nil
+		// Используем accrualResponse если он не равен nil
 		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, order_status, timestamp) VALUES ($1, $2, $3, $4)",
 			orderNumber, userID, accrualResponse.Status, currentTime.Format(time.RFC3339))
 		if err != nil {
@@ -156,11 +156,23 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 			http.Error(w, "Ошибка при добавлении номера заказа в базу данных", http.StatusInternalServerError)
 			return
 		}
+
+		_, err = conn.Exec(r.Context(), "UPDATE loyalty_balance SET points = points + $1 WHERE user_id = $2",
+			accrualResponse.Accrual, userID)
+		if err != nil {
+			logger.Error("Ошибка при обновлении баланса", zap.Error(err))
+			http.Error(w, "Ошибка при обновлении баланса", http.StatusInternalServerError)
+			return
+		}
 	} else {
-		// accrualResponse равен nil, обработка этого случая
-		logger.Error("accrualResponse равен nil")
-		http.Error(w, "accrualResponse равен nil", http.StatusInternalServerError)
-		return
+		// Не используем accrualResponse если он равен nil
+		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, timestamp) VALUES ($1, $2, $3, $4)",
+			orderNumber, userID, currentTime.Format(time.RFC3339))
+		if err != nil {
+			logger.Error("Ошибка при добавлении номера заказа в базу данных", zap.Error(err))
+			http.Error(w, "Ошибка при добавлении номера заказа в базу данных", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Ответ клиенту

@@ -28,7 +28,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logg
 	// Запрос текущего баланса из таблицы loyalty_balance
 	err = conn.QueryRow(r.Context(), "SELECT points FROM loyalty_balance WHERE user_id = (SELECT user_id FROM users WHERE login = $1)", username).Scan(&currentBalance)
 	if err != nil {
-		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
+		logger.Error("Ошибка при выполнении запроса к базе данных1", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
 		return
 	}
@@ -36,7 +36,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logg
 	// Запрос суммы снятых средств (withdrawn) из таблицы loyalty_withdrawals
 	err = conn.QueryRow(r.Context(), "SELECT SUM(withdrawn_points) FROM loyalty_withdrawals WHERE user_id = (SELECT user_id FROM users WHERE login = $1)", username).Scan(&totalWithdrawn)
 	if err != nil {
-		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
+		logger.Error("Ошибка при выполнении запроса к базе данных2", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
 		return
 	}
