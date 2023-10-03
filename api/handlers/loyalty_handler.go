@@ -23,7 +23,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logg
 
 	// Запрос баланса пользователя
 	var currentBalance float64
-	var totalWithdrawn float64
+	var totalWithdrawn *float64
 
 	// Запрос текущего баланса из таблицы loyalty_balance
 	err = conn.QueryRow(r.Context(), "SELECT points FROM loyalty_balance WHERE user_id = (SELECT user_id FROM users WHERE login = $1)", username).Scan(&currentBalance)
@@ -43,8 +43,8 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logg
 
 	// Формирование ответа
 	balanceData := struct {
-		Current   float64 `json:"current"`
-		Withdrawn float64 `json:"withdrawn"`
+		Current   float64  `json:"current"`
+		Withdrawn *float64 `json:"withdrawn"`
 	}{
 		Current:   currentBalance,
 		Withdrawn: totalWithdrawn,
