@@ -25,6 +25,32 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 		return
 	}
 
+	// Запрос для получения списка таблиц
+	query := `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`
+
+	// Выполнение запроса и получение результатов
+	rows, err := conn.Query(r.Context(), query)
+	if err != nil {
+		logger.Error("Ошибка при выполнении запроса", zap.Error(err))
+		return
+	}
+	defer rows.Close()
+
+	// Считывание и вывод списка таблиц
+	var tableName string
+	for rows.Next() {
+		if err := rows.Scan(&tableName); err != nil {
+			logger.Error("Ошибка при сканировании строки результата", zap.Error(err))
+			return
+		}
+		logger.Info("Найдена таблица", zap.String("table_name", tableName))
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Error("Ошибка при чтении строк результата", zap.Error(err))
+		return
+	}
+
 	// Отладочный лог: вывод данных о полученном пользователе
 	logger.Debug("Получен запрос на регистрацию пользователя", zap.Any("user", user))
 
