@@ -91,7 +91,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 	}
 
 	// Ответ клиенту
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	logger.Info("Пользователь успешно зарегистрирован", zap.String("login", user.Login))
 	fmt.Fprintf(w, "Пользователь %s успешно аутентифицирован", user.Login)
 }
