@@ -74,10 +74,10 @@ func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*Accrua
 }
 
 type Order struct {
-	Number     string         `json:"number"`
-	Status     sql.NullString `json:"status"`
-	Accrual    float64        `json:"accrual,omitempty"`
-	UploadedAt time.Time      `json:"uploaded_at"`
+	Number     string    `json:"number"`
+	Status     *string   `json:"status"`
+	Accrual    float64   `json:"accrual,omitempty"`
+	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *config.Config, logger *zap.Logger) {
