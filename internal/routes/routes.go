@@ -60,21 +60,21 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 			// Роут для полученя информации о текущем балансе
 			route.Get(
 				"/api/user/balance", func(w http.ResponseWriter, r *http.Request) {
-					handlers.BalanceHandler(w, r, conn)
+					handlers.BalanceHandler(w, r, conn, logger)
 				},
 			)
 
 			// Роут для полученя информации о текущем балансе
 			route.Post(
 				"/api/user/balance/withdraw", func(w http.ResponseWriter, r *http.Request) {
-					handlers.WithdrawHandler(w, r, conn)
+					handlers.WithdrawHandler(w, r, conn, logger)
 				},
 			)
 
 			// Роут для полученя информации о текущем балансе
 			route.Get(
 				"/api/user/withdrawals", func(w http.ResponseWriter, r *http.Request) {
-					handlers.WithdrawalsHandler(w, r, conn)
+					handlers.WithdrawalsHandler(w, r, conn, logger)
 				},
 			)
 
