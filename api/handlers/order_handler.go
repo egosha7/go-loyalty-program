@@ -49,7 +49,7 @@ type AccrualResponse struct {
 
 func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*AccrualResponse, error) {
 	// Формируйте URL для запроса к системе расчёта баллов на основе cfg.AccrualSystemAddr и orderNumber
-	url := fmt.Sprintf("http://%s/api/orders/%s", cfg.AccrualSystemAddr, orderNumber)
+	url := fmt.Sprintf("%s/api/orders/%s", cfg.AccrualSystemAddr, orderNumber)
 
 	// Отправьте GET-запрос к системе расчёта баллов
 	resp, err := http.Get(url)
