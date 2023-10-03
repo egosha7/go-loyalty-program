@@ -90,6 +90,12 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 		return
 	}
 
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth",
+		Value:    user.Login, // Используйте логин пользователя как идентификатор
+		HttpOnly: true,
+	})
+
 	// Ответ клиенту
 	w.WriteHeader(http.StatusOK)
 	logger.Info("Пользователь успешно зарегистрирован", zap.String("login", user.Login))
