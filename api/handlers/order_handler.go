@@ -76,7 +76,7 @@ func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*Accrua
 type Order struct {
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual,omitempty"`
+	Accrual    float64   `json:"accrual,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
 
@@ -194,7 +194,7 @@ func OrdersListHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, l
 
 		// Проверяем, есть ли значение accrual
 		if accrual.Valid {
-			order.Accrual = int(accrual.Int64)
+			order.Accrual = float64(accrual.Int64)
 		} else {
 			order.Accrual = 0 // Или другое значение по умолчанию
 		}

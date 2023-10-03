@@ -66,7 +66,7 @@ func Check(logger *zap.Logger, conn *pgx.Conn) {
 				withdrawal_id serial PRIMARY KEY,
 				user_id integer REFERENCES users (user_id),
 				order_id integer REFERENCES orders (order_id),
-				withdrawn_points integer
+				withdrawn_points double precision
 			);
 		`},
 
@@ -74,7 +74,7 @@ func Check(logger *zap.Logger, conn *pgx.Conn) {
 			CREATE TABLE IF NOT EXISTS loyalty_balance (
 				loyalty_id serial PRIMARY KEY,
 				user_id integer REFERENCES users (user_id),
-				points integer
+				points double precision
 			);
 		`},
 	}
