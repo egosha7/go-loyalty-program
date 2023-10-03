@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/egosha7/go-loyalty-program.git/internal/config"
 	"github.com/jackc/pgx/v4" // Драйвер PostgreSQL
 	"io"
 	"net/http"
@@ -39,7 +40,39 @@ func isLuhnValid(number string) bool {
 	return sum%10 == 0
 }
 
-func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+type AccrualResponse struct {
+	Order   string `json:"order"`
+	Status  string `json:"status"`
+	Accrual int    `json:"accrual,omitempty"`
+}
+
+func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*AccrualResponse, error) {
+	// Формируйте URL для запроса к системе расчёта баллов на основе cfg.AccrualSystemAddr и orderNumber
+	url := fmt.Sprintf("http://%s/api/orders/%s", cfg.AccrualSystemAddr, orderNumber)
+
+	// Отправьте GET-запрос к системе расчёта баллов
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Обработайте ответ от системы расчёта баллов
+	if resp.StatusCode == http.StatusOK {
+		var accrualResponse AccrualResponse
+		err := json.NewDecoder(resp.Body).Decode(&accrualResponse)
+		if err != nil {
+			return nil, err
+		}
+		return &accrualResponse, nil
+	} else if resp.StatusCode == http.StatusNoContent {
+		return nil, nil
+	} else {
+		return nil, fmt.Errorf("Ошибка при запросе к системе расчёта баллов: %d", resp.StatusCode)
+	}
+}
+
+func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *config.Config) {
 	// Проверка аутентификации пользователя
 	cookie, err := r.Cookie("auth")
 	if err != nil || cookie.Value == "" {
@@ -90,8 +123,16 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
+	accrualResponse, err := sendRequestToAccrualSystem(orderNumber, cfg)
+	if err != nil {
+		http.Error(w, "Ошибка при запросе к системе расчёта баллов", http.StatusInternalServerError)
+		return
+	}
+
+	currentTime := time.Now()
+
 	// Вставка номера заказа в базу данных
-	_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id) VALUES ($1, $2)", orderNumber, userID)
+	_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, order_status, timestamp) VALUES ($1, $2, $3, $4)", orderNumber, userID, accrualResponse.Status, currentTime.Format(time.RFC3339))
 	if err != nil {
 		http.Error(w, "Ошибка при добавлении номера заказа в базу данных", http.StatusInternalServerError)
 		return

@@ -19,7 +19,7 @@ func Default() *Config {
 	return &Config{
 		Addr:              "localhost:8080",
 		DataBaseURI:       "postgres://postgres:egor@localhost:5432/loyalty",
-		AccrualSystemAddr: "http://localhost:8081",
+		AccrualSystemAddr: "localhost:8081",
 	}
 }
 

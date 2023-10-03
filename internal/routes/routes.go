@@ -46,7 +46,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 			// Роут для отправки номера заказа
 			route.Post(
 				"/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
-					handlers.OrdersHandler(w, r, conn)
+					handlers.OrdersHandler(w, r, conn, cfg)
 				},
 			)
 
