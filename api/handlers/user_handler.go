@@ -82,11 +82,20 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 		return
 	}
 
-	// Вставка нового пользователя в базу данных
-	_, err = conn.Exec(r.Context(), "INSERT INTO users (login, password) VALUES ($1, $2)", user.Login, hashedPassword)
+	// Вставка нового пользователя в таблицу users и получение user_id
+	var userID int
+	err = conn.QueryRow(r.Context(), "INSERT INTO users (login, password) VALUES ($1, $2) RETURNING user_id", user.Login, hashedPassword).Scan(&userID)
 	if err != nil {
-		logger.Error("Ошибка при добавлении пользователя в базу данных", zap.Error(err))
-		http.Error(w, "Ошибка при добавлении пользователя в базу данных", http.StatusInternalServerError)
+		// Обработка ошибки
+		http.Error(w, "Ошибка при регистрации пользователя", http.StatusInternalServerError)
+		return
+	}
+
+	// Вставка записи в таблицу loyalty_balance с начальными баллами (0.0)
+	_, err = conn.Exec(r.Context(), "INSERT INTO loyalty_balance (user_id, points) VALUES ($1, $2)", userID, 0.0)
+	if err != nil {
+		// Обработка ошибки
+		http.Error(w, "Ошибка при добавлении начальных баллов в loyalty_balance", http.StatusInternalServerError)
 		return
 	}
 

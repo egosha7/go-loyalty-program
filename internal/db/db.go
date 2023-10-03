@@ -74,7 +74,7 @@ func Check(logger *zap.Logger, conn *pgx.Conn) {
 			CREATE TABLE IF NOT EXISTS loyalty_balance (
 				loyalty_id serial PRIMARY KEY,
 				user_id integer REFERENCES users (user_id),
-				points double precision
+				points double precision DEFAULT 0.0
 			);
 		`},
 	}
