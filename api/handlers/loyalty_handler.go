@@ -91,7 +91,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 
 	// Проверка, принадлежит ли заказ пользователю
 	var orderUser string
-	err = conn.QueryRow(r.Context(), "SELECT users.login FROM orders\nINNER JOIN users ON users.user_id = orders.user_id\nWHERE order_number = $1", withdrawRequest.Order).Scan(&orderUser)
+	err = conn.QueryRow(r.Context(), "SELECT users.login FROM orders INNER JOIN users ON users.user_id = orders.user_id WHERE order_number = $1", withdrawRequest.Order).Scan(&orderUser)
 	if err != nil {
 		logger.Error("Заказ не найден", zap.Error(err))
 		http.Error(w, "Заказ не найден", http.StatusUnprocessableEntity)
