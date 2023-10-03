@@ -46,14 +46,14 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 			// Роут для отправки номера заказа
 			route.Post(
 				"/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
-					handlers.OrdersHandler(w, r, conn, cfg)
+					handlers.OrdersHandler(w, r, conn, cfg, logger)
 				},
 			)
 
 			// Роут для полученя информации о заказах
 			route.Get(
 				"/api/user/orders", func(w http.ResponseWriter, r *http.Request) {
-					handlers.OrdersListHandler(w, r, conn)
+					handlers.OrdersListHandler(w, r, conn, logger)
 				},
 			)
 
