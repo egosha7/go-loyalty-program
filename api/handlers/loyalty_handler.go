@@ -5,6 +5,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"net/http"
+	"regexp"
 	"time"
 )
 
@@ -89,25 +90,10 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 		return
 	}
 
-	// Проверка, принадлежит ли заказ пользователю
-	var orderUser string
-	err = conn.QueryRow(r.Context(), "SELECT user_id FROM orders WHERE order_number = $1", withdrawRequest.Order).Scan(&orderUser)
-	logger.Info("ДАННЫЕ!!!!", zap.String("username", username), zap.String("orderUser", orderUser), zap.String("withdrawRequest.Order", withdrawRequest.Order))
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			logger.Error("Заказ не найден", zap.Error(err))
-			http.Error(w, "Заказ не найден", http.StatusUnprocessableEntity)
-			return
-		} else {
-			logger.Error("Ошибка запроса на проверку", zap.Error(err))
-			http.Error(w, "Ошибка запроса на проверку", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if orderUser != username {
-		logger.Error("Заказ не принадлежит пользователю")
-		http.Error(w, "Заказ не принадлежит пользователю", http.StatusForbidden)
+	// Проверка формата номера заказа
+	if !regexp.MustCompile(`^\d+$`).MatchString(withdrawRequest.Order) || !isLuhnValid(withdrawRequest.Order) {
+		logger.Error("Неверный формат номера заказа", zap.String("order_number", withdrawRequest.Order))
+		http.Error(w, "Неверный формат номера заказа", http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -124,6 +110,34 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 		logger.Error("На счету недостаточно средств")
 		http.Error(w, "На счету недостаточно средств", http.StatusPaymentRequired)
 		return
+	}
+
+	var orderExists bool
+	err = conn.QueryRow(r.Context(), "SELECT EXISTS (SELECT 1 FROM orders WHERE order_number = $1)", withdrawRequest.Order).Scan(&orderExists)
+	if err != nil {
+		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
+		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
+		return
+	}
+
+	if orderExists {
+		// Изменение заказа в таблице orders
+		_, err = conn.Exec(r.Context(), "UPDATE orders SET accrual = $1, timestamp = $2, order_status = 'PROCESSING' WHERE order_number = $2",
+			withdrawRequest.Sum, withdrawRequest.Order)
+		if err != nil {
+			logger.Error("Ошибка при обновлении заказа в базе данных", zap.Error(err))
+			http.Error(w, "Ошибка при обновлении заказа в базе данных", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Вставка нового заказа в таблицу orders
+		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, order_status, timestamp) VALUES ($1, (SELECT user_id FROM users WHERE login = $2), $3, $4)",
+			withdrawRequest.Order, username, "NEW", time.Now())
+		if err != nil {
+			logger.Error("Ошибка при добавлении заказа в базу данных", zap.Error(err))
+			http.Error(w, "Ошибка при добавлении заказа в базу данных", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Вставка данных о списании в таблицу loyalty_withdrawals
