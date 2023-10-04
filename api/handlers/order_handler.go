@@ -32,7 +32,7 @@ func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*Accrua
 	}
 	defer resp.Body.Close()
 
-	// Обработайте ответ от системы расчёта баллов
+	// Обработка ответа от системы расчёта баллов
 	if resp.StatusCode == http.StatusOK {
 		var accrualResponse AccrualResponse
 		err := json.NewDecoder(resp.Body).Decode(&accrualResponse)
