@@ -191,7 +191,7 @@ func OrdersListHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, l
 	username := cookie.Value
 
 	// Запрос списка заказов пользователя
-	rows, err := conn.Query(r.Context(), "SELECT order_number, order_status, order_accural, 'timestamp' FROM orders  WHERE user_id = (SELECT user_id FROM users WHERE login = $1) ORDER BY 'timestamp' ASC", username)
+	rows, err := conn.Query(r.Context(), "SELECT order_number, order_status, order_accural, timestamp FROM orders  WHERE user_id = (SELECT user_id FROM users WHERE login = $1) ORDER BY timestamp ASC", username)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
