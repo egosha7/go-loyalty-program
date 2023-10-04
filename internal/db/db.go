@@ -57,6 +57,7 @@ func Check(logger *zap.Logger, conn *pgx.Conn) {
 				order_id serial PRIMARY KEY,
 				user_id integer REFERENCES users (user_id),
 				order_status text,
+			    order_accural double precision,
 				order_number text,
 				"timestamp" timestamptz
 			);
