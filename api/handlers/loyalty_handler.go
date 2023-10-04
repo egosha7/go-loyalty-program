@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"net/http"
@@ -91,47 +89,20 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 		return
 	}
 
-	logger.Info("ДАННЫЕ!!!!", zap.String("username", username), zap.String("withdrawRequest.Order", withdrawRequest.Order))
-
-	rows, err := conn.Query(context.Background(), "SELECT * FROM orders")
-	if err != nil {
-		fmt.Println("Query failed:", err)
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			orderID     int
-			userID      int
-			orderStatus string
-			orderNumber string
-			accural     float64
-			timestamp   time.Time
-		)
-		err := rows.Scan(&orderID, &userID, &orderStatus, &orderNumber, &accural, &timestamp)
-		if err != nil {
-			fmt.Println("Scan failed:", err)
-			return
-		}
-		logger.Info("Order Details",
-			zap.Int("OrderID", orderID),
-			zap.Int("UserID", userID),
-			zap.String("OrderStatus", orderStatus),
-			zap.String("OrderNumber", orderNumber),
-			zap.Float64("OrderNumber", accural),
-			zap.Time("Timestamp", timestamp),
-		)
-	}
-
 	// Проверка, принадлежит ли заказ пользователю
 	var orderUser string
 	err = conn.QueryRow(r.Context(), "SELECT user_id FROM orders WHERE order_number = $1", withdrawRequest.Order).Scan(&orderUser)
 	logger.Info("ДАННЫЕ!!!!", zap.String("username", username), zap.String("orderUser", orderUser), zap.String("withdrawRequest.Order", withdrawRequest.Order))
 	if err != nil {
-		logger.Error("Заказ не найден", zap.Error(err))
-		http.Error(w, "Заказ не найден", http.StatusUnprocessableEntity)
-		return
+		if err == pgx.ErrNoRows {
+			logger.Error("Заказ не найден", zap.Error(err))
+			http.Error(w, "Заказ не найден", http.StatusUnprocessableEntity)
+			return
+		} else {
+			logger.Error("Ошибка запроса на проверку", zap.Error(err))
+			http.Error(w, "Ошибка запроса на проверку", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if orderUser != username {
