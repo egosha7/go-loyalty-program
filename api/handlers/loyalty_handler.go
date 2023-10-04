@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"net/http"
@@ -87,6 +89,35 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 		logger.Error("Неверный формат запроса", zap.Error(err))
 		http.Error(w, "Неверный формат запроса", http.StatusUnprocessableEntity)
 		return
+	}
+
+	rows, err := conn.Query(context.Background(), "SELECT * FROM orders")
+	if err != nil {
+		fmt.Println("Query failed:", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			orderID     int
+			userID      int
+			orderStatus string
+			orderNumber string
+			timestamp   time.Time
+		)
+		err := rows.Scan(&orderID, &userID, &orderStatus, &orderNumber, &timestamp)
+		if err != nil {
+			fmt.Println("Scan failed:", err)
+			return
+		}
+		logger.Info("Order Details",
+			zap.Int("OrderID", orderID),
+			zap.Int("UserID", userID),
+			zap.String("OrderStatus", orderStatus),
+			zap.String("OrderNumber", orderNumber),
+			zap.Time("Timestamp", timestamp),
+		)
 	}
 
 	// Проверка, принадлежит ли заказ пользователю
