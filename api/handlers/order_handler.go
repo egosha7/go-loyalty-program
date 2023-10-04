@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/go-loyalty-program.git/internal/config"
@@ -192,7 +191,7 @@ func OrdersListHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, l
 	username := cookie.Value
 
 	// Запрос списка заказов пользователя
-	rows, err := conn.Query(r.Context(), "SELECT orders.order_number, orders.order_status, loyalty_withdrawals.withdrawn_points, orders.timestamp FROM orders LEFT JOIN loyalty_withdrawals ON orders.order_id = loyalty_withdrawals.order_id WHERE orders.user_id = (SELECT user_id FROM users WHERE login = $1) ORDER BY orders.timestamp ASC", username)
+	rows, err := conn.Query(r.Context(), "SELECT order_number, order_status, order_accural, 'timestamp' FROM orders  WHERE user_id = (SELECT user_id FROM users WHERE login = $1) ORDER BY 'timestamp' ASC", username)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
@@ -204,19 +203,11 @@ func OrdersListHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, l
 
 	for rows.Next() {
 		var order Order
-		var accrual sql.NullInt64 // Используем sql.NullInt64 для обработки отсутствия accrual
 
-		if err := rows.Scan(&order.Number, &order.Status, &accrual, &order.UploadedAt); err != nil {
+		if err := rows.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt); err != nil {
 			logger.Error("Ошибка при сканировании результатов запроса", zap.Error(err))
 			http.Error(w, "Ошибка при сканировании результатов запроса", http.StatusInternalServerError)
 			return
-		}
-
-		// Проверяем, есть ли значение accrual
-		if accrual.Valid {
-			order.Accrual = float64(accrual.Int64)
-		} else {
-			order.Accrual = 0 // Или другое значение по умолчанию
 		}
 
 		orders = append(orders, order)
