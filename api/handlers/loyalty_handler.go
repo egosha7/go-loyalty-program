@@ -104,9 +104,10 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 			userID      int
 			orderStatus string
 			orderNumber string
+			accural     float64
 			timestamp   time.Time
 		)
-		err := rows.Scan(&orderID, &userID, &orderStatus, &orderNumber, &timestamp)
+		err := rows.Scan(&orderID, &userID, &orderStatus, &orderNumber, &accural, &timestamp)
 		if err != nil {
 			fmt.Println("Scan failed:", err)
 			return
@@ -116,6 +117,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 			zap.Int("UserID", userID),
 			zap.String("OrderStatus", orderStatus),
 			zap.String("OrderNumber", orderNumber),
+			zap.Float64("OrderNumber", accural),
 			zap.Time("Timestamp", timestamp),
 		)
 	}
