@@ -43,7 +43,7 @@ func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*Accrua
 	} else if resp.StatusCode == http.StatusNoContent {
 		return nil, nil
 	} else {
-		return nil, fmt.Errorf("Ошибка при запросе к системе расчёта баллов: %d", resp.StatusCode)
+		return nil, fmt.Errorf("ошибка при запросе к системе расчёта баллов: %d", resp.StatusCode)
 	}
 }
 
