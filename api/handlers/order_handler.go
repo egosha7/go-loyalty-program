@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/go-loyalty-program.git/internal/config"
+	"github.com/egosha7/go-loyalty-program.git/internal/helpers"
 	"github.com/jackc/pgx/v4" // Драйвер PostgreSQL
 	"go.uber.org/zap"
 	"io"
@@ -13,33 +14,6 @@ import (
 	"strings"
 	"time"
 )
-
-func isLuhnValid(number string) bool {
-	// Алгоритм Луна для проверки корректности номера
-	number = strings.Replace(number, " ", "", -1)
-	if len(number) < 2 {
-		return false
-	}
-
-	sum := 0
-	alternate := false
-
-	for i := len(number) - 1; i >= 0; i-- {
-		digit := int(number[i] - '0')
-
-		if alternate {
-			digit *= 2
-			if digit > 9 {
-				digit -= 9
-			}
-		}
-
-		sum += digit
-		alternate = !alternate
-	}
-
-	return sum%10 == 0
-}
 
 type AccrualResponse struct {
 	Order   string  `json:"order"`
@@ -114,7 +88,7 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 	orderNumber := strings.TrimSpace(string(bodyBytes))
 
 	// Проверка формата номера заказа
-	if !regexp.MustCompile(`^\d+$`).MatchString(orderNumber) || !isLuhnValid(orderNumber) {
+	if !regexp.MustCompile(`^\d+$`).MatchString(orderNumber) || !helpers.IsLuhnValid(orderNumber) {
 		logger.Error("Неверный формат номера заказа", zap.String("order_number", orderNumber))
 		http.Error(w, "Неверный формат номера заказа", http.StatusUnprocessableEntity)
 		return
@@ -164,7 +138,6 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 			http.Error(w, "Ошибка при обновлении баланса", http.StatusInternalServerError)
 			return
 		}
-		logger.Info("Данные от системы", zap.String("accrualResponse.Accrual", fmt.Sprintf("%.2f", accrualResponse.Accrual)), zap.String("accrualResponse.Status", accrualResponse.Status), zap.String("НОМЕР ЗАКАЗА", orderNumber), zap.Int("НОМЕР ЮЗЕРА", userID))
 	} else {
 		// Не используем accrualResponse если он равен nil
 		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, order_status, timestamp) VALUES ($1, $2, $3, $4)",

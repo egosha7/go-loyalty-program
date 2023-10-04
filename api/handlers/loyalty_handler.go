@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/egosha7/go-loyalty-program.git/internal/helpers"
 	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"net/http"
@@ -10,9 +11,6 @@ import (
 )
 
 func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger *zap.Logger) {
-	// Логируем начало обработки запроса
-	logger.Info("Handling BalanceHandler")
-
 	// Извлечение имени пользователя из куки
 	cookie, err := r.Cookie("auth")
 	if err != nil {
@@ -59,15 +57,9 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logg
 		http.Error(w, "Ошибка при кодировании ответа", http.StatusInternalServerError)
 		return
 	}
-
-	// Логируем успешное завершение обработки запроса
-	logger.Info("BalanceHandler completed")
 }
 
 func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger *zap.Logger) {
-	// Логируем начало обработки запроса
-	logger.Info("Handling WithdrawHandler")
-
 	// Извлечение имени пользователя из куки
 	cookie, err := r.Cookie("auth")
 	if err != nil {
@@ -91,7 +83,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 	}
 
 	// Проверка формата номера заказа
-	if !regexp.MustCompile(`^\d+$`).MatchString(withdrawRequest.Order) || !isLuhnValid(withdrawRequest.Order) {
+	if !regexp.MustCompile(`^\d+$`).MatchString(withdrawRequest.Order) || !helpers.IsLuhnValid(withdrawRequest.Order) {
 		logger.Error("Неверный формат номера заказа", zap.String("order_number", withdrawRequest.Order))
 		http.Error(w, "Неверный формат номера заказа", http.StatusUnprocessableEntity)
 		return
@@ -112,6 +104,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 		return
 	}
 
+	// Проверка на существование заказа
 	var orderExists bool
 	err = conn.QueryRow(r.Context(), "SELECT EXISTS (SELECT 1 FROM orders WHERE order_number = $1)", withdrawRequest.Order).Scan(&orderExists)
 	if err != nil {
@@ -164,9 +157,6 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 }
 
 func WithdrawalsHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger *zap.Logger) {
-	// Логируем начало обработки запроса
-	logger.Info("Handling WithdrawalsHandler")
-
 	// Извлечение имени пользователя из куки
 	cookie, err := r.Cookie("auth")
 	if err != nil {

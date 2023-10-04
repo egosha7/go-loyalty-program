@@ -119,8 +119,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
-	// В случае успешной аутентификации вы можете отправить куки или токен для аутентифицированного пользователя
-	// Ниже приведен пример установки куки
+	// Установка куки
 	http.SetCookie(w, &http.Cookie{
 		Name:     "auth",
 		Value:    user.Login, // Используйте логин пользователя как идентификатор
