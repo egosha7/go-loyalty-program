@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/egosha7/go-loyalty-program.git/internal/config"
 	"github.com/egosha7/go-loyalty-program.git/internal/helpers"
-	"github.com/jackc/pgx/v4" // Драйвер PostgreSQL
+	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
