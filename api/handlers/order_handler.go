@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/go-loyalty-program.git/internal/config"
@@ -203,11 +204,19 @@ func OrdersListHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, l
 
 	for rows.Next() {
 		var order Order
+		var accrual sql.NullFloat64 // Используем sql.NullFloat64 для обработки NULL-значений
 
-		if err := rows.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt); err != nil {
+		if err := rows.Scan(&order.Number, &order.Status, &accrual, &order.UploadedAt); err != nil {
 			logger.Error("Ошибка при сканировании результатов запроса", zap.Error(err))
 			http.Error(w, "Ошибка при сканировании результатов запроса", http.StatusInternalServerError)
 			return
+		}
+
+		// Проверяем, есть ли значение accrual
+		if accrual.Valid {
+			order.Accrual = accrual.Float64
+		} else {
+			order.Accrual = 0 // Или другое значение по умолчанию
 		}
 
 		orders = append(orders, order)
