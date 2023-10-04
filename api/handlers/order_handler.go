@@ -164,7 +164,7 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 			http.Error(w, "Ошибка при обновлении баланса", http.StatusInternalServerError)
 			return
 		}
-		logger.Info("Данные от системы", zap.String("accrualResponse.Accrual", fmt.Sprintf("%.2f", accrualResponse.Accrual)), zap.String("accrualResponse.Status", accrualResponse.Status))
+		logger.Info("Данные от системы", zap.String("accrualResponse.Accrual", fmt.Sprintf("%.2f", accrualResponse.Accrual)), zap.String("accrualResponse.Status", accrualResponse.Status), zap.String("НОМЕР ЗАКАЗА", orderNumber), zap.Int("НОМЕР ЮЗЕРА", userID))
 	} else {
 		// Не используем accrualResponse если он равен nil
 		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, timestamp) VALUES ($1, $2, $3)",
