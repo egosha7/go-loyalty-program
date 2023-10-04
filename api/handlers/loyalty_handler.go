@@ -91,6 +91,8 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 		return
 	}
 
+	logger.Info("ДАННЫЕ!!!!", zap.String("username", username), zap.String("withdrawRequest.Order", withdrawRequest.Order))
+
 	rows, err := conn.Query(context.Background(), "SELECT * FROM orders")
 	if err != nil {
 		fmt.Println("Query failed:", err)
