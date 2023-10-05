@@ -92,7 +92,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 
 	// Проверка на наличие достаточного баланса для списания
 	var currentBalance float64
-	err = conn.QueryRow(r.Context(), "SELECT points FROM loyalty_balance WHERE user_id = (SELECT user_id FROM users WHERE login = $1)", username).Scan(&currentBalance)
+	currentBalance, err = queries.SelectUserBalance(r.Context(), conn, username)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
@@ -107,7 +107,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 
 	// Проверка на существование заказа
 	var orderExists bool
-	err = conn.QueryRow(r.Context(), "SELECT EXISTS (SELECT 1 FROM orders WHERE order_number = $1)", withdrawRequest.Order).Scan(&orderExists)
+	orderExists, err = queries.CheckOrderExists(r.Context(), conn, withdrawRequest.Order)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
@@ -116,8 +116,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 
 	if orderExists {
 		// Изменение заказа в таблице orders
-		_, err = conn.Exec(r.Context(), "UPDATE orders SET accrual = $1, timestamp = $2, order_status = 'PROCESSING' WHERE order_number = $2",
-			withdrawRequest.Sum, withdrawRequest.Order)
+		err = queries.UpdateOrder(r.Context(), conn, withdrawRequest.Order, withdrawRequest.Sum)
 		if err != nil {
 			logger.Error("Ошибка при обновлении заказа в базе данных", zap.Error(err))
 			http.Error(w, "Ошибка при обновлении заказа в базе данных", http.StatusInternalServerError)
@@ -125,8 +124,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 		}
 	} else {
 		// Вставка нового заказа в таблицу orders
-		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, order_status, timestamp) VALUES ($1, (SELECT user_id FROM users WHERE login = $2), $3, $4)",
-			withdrawRequest.Order, username, "NEW", time.Now())
+		err = queries.InsertNewOrder(r.Context(), conn, withdrawRequest.Order, username)
 		if err != nil {
 			logger.Error("Ошибка при добавлении заказа в базу данных", zap.Error(err))
 			http.Error(w, "Ошибка при добавлении заказа в базу данных", http.StatusInternalServerError)
@@ -135,7 +133,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 	}
 
 	// Вставка данных о списании в таблицу loyalty_withdrawals
-	_, err = conn.Exec(r.Context(), "INSERT INTO loyalty_withdrawals (user_id, order_id, withdrawn_points) VALUES ((SELECT user_id FROM users WHERE login = $1), (SELECT order_id FROM orders WHERE order_number = $2), $3)", username, withdrawRequest.Order, withdrawRequest.Sum)
+	err = queries.InsertWithdrawalData(r.Context(), conn, username, withdrawRequest.Order, withdrawRequest.Sum)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
@@ -143,7 +141,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 	}
 
 	// Обновление баланса пользователя
-	_, err = conn.Exec(r.Context(), "UPDATE loyalty_balance SET points = points - $1 WHERE user_id = (SELECT user_id FROM users WHERE login = $2)", withdrawRequest.Sum, username)
+	err = queries.UpdateUserBalance(r.Context(), conn, username, withdrawRequest.Sum)
 	if err != nil {
 		logger.Error("Ошибка при обновлении баланса пользователя", zap.Error(err))
 		http.Error(w, "Ошибка при обновлении баланса пользователя", http.StatusInternalServerError)
