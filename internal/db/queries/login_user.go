@@ -8,11 +8,11 @@ import (
 func CheckUniqueLogin(ctx context.Context, conn *pgx.Conn, login string) (bool, error) {
 	var existingUser string
 	err := conn.QueryRow(ctx, "SELECT login FROM users WHERE login = $1", login).Scan(&existingUser)
+	if err == pgx.ErrNoRows {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
-	}
-	if existingUser != "" {
-		return false, nil
 	}
 	return true, nil
 }
