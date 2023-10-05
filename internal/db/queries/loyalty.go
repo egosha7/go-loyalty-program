@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+var withdrawals []struct {
+	Order       string  `json:"order"`
+	Sum         float64 `json:"sum"`
+	ProcessedAt string  `json:"processed_at"`
+}
+
 func SelectUserBalance(ctx context.Context, conn *pgx.Conn, username string) (float64, error) {
 	var balance float64
 	err := conn.QueryRow(ctx, "SELECT points FROM loyalty_balance WHERE user_id = (SELECT user_id FROM users WHERE login = $1)", username).Scan(&balance)
@@ -51,4 +57,12 @@ func InsertWithdrawalData(ctx context.Context, conn *pgx.Conn, username, orderNu
 func UpdateUserBalance(ctx context.Context, conn *pgx.Conn, username string, amount float64) error {
 	_, err := conn.Exec(ctx, "UPDATE loyalty_balance SET points = points - $1 WHERE user_id = (SELECT user_id FROM users WHERE login = $2)", amount, username)
 	return err
+}
+
+func GetWithdrawals(ctx context.Context, conn *pgx.Conn, username string) (pgx.Rows, error) {
+	rows, err := conn.Query(ctx, "SELECT orders.order_number, loyalty_withdrawals.withdrawn_points, orders.timestamp FROM orders INNER JOIN loyalty_withdrawals ON orders.order_id = loyalty_withdrawals.order_id WHERE orders.user_id = (SELECT user_id FROM users WHERE login = $1) ORDER BY orders.timestamp ASC", username)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }

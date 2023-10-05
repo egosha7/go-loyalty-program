@@ -163,7 +163,7 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, 
 	username := cookie.Value
 
 	// Запрос данных о списаниях пользователя
-	rows, err := conn.Query(r.Context(), "SELECT orders.order_number, loyalty_withdrawals.withdrawn_points, orders.timestamp FROM orders INNER JOIN loyalty_withdrawals ON orders.order_id = loyalty_withdrawals.order_id WHERE orders.user_id = (SELECT user_id FROM users WHERE login = $1) ORDER BY orders.timestamp ASC", username)
+	rows, err := queries.GetWithdrawals(r.Context(), conn, username)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
