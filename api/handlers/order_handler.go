@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -24,7 +25,7 @@ type AccrualResponse struct {
 
 func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*AccrualResponse, error) {
 	// Формируем URL для запроса к системе расчёта баллов на основе cfg.AccrualSystemAddr и orderNumber
-	url := fmt.Sprintf("%s/api/orders/%s", cfg.AccrualSystemAddr, orderNumber)
+	url := path.Join(cfg.AccrualSystemAddr, "api/orders", orderNumber)
 
 	// Отправка GET-запрос к системе расчёта баллов
 	resp, err := http.Get(url)

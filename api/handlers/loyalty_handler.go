@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+// Создание списка для хранения данных о списаниях
+var withdrawals []struct {
+	Order       string  `json:"order"`
+	Sum         float64 `json:"sum"`
+	ProcessedAt string  `json:"processed_at"`
+}
+
 func BalanceHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger *zap.Logger) {
 	// Извлечение имени пользователя из куки
 	cookie, err := r.Cookie("auth")
@@ -170,13 +177,6 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, 
 		return
 	}
 	defer rows.Close()
-
-	// Создание списка для хранения данных о списаниях
-	var withdrawals []struct {
-		Order       string  `json:"order"`
-		Sum         float64 `json:"sum"`
-		ProcessedAt string  `json:"processed_at"`
-	}
 
 	// Итерация по результатам запроса и добавление их в список withdrawals
 	for rows.Next() {
