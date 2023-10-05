@@ -1,4 +1,0 @@
-POST localhost:8080/api/user/orders
-Content-Type: text/plain
-
-2377225624

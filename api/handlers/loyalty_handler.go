@@ -151,9 +151,6 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, log
 
 	// Отправка успешного ответа
 	w.WriteHeader(http.StatusOK)
-
-	// Логируем успешное завершение обработки запроса
-	logger.Info("WithdrawHandler completed")
 }
 
 func WithdrawalsHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger *zap.Logger) {
@@ -225,7 +222,4 @@ func WithdrawalsHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, 
 		http.Error(w, "Ошибка при кодировании ответа", http.StatusInternalServerError)
 		return
 	}
-
-	// Логируем успешное завершение обработки запроса
-	logger.Info("WithdrawalsHandler completed")
 }

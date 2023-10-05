@@ -22,17 +22,17 @@ type AccrualResponse struct {
 }
 
 func sendRequestToAccrualSystem(orderNumber string, cfg *config.Config) (*AccrualResponse, error) {
-	// Формируйте URL для запроса к системе расчёта баллов на основе cfg.AccrualSystemAddr и orderNumber
+	// Формируем URL для запроса к системе расчёта баллов на основе cfg.AccrualSystemAddr и orderNumber
 	url := fmt.Sprintf("%s/api/orders/%s", cfg.AccrualSystemAddr, orderNumber)
 
-	// Отправьте GET-запрос к системе расчёта баллов
+	// Отправка GET-запрос к системе расчёта баллов
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	// Обработайте ответ от системы расчёта баллов
+	// Обработка ответа от системы расчёта баллов
 	if resp.StatusCode == http.StatusOK {
 		var accrualResponse AccrualResponse
 		err := json.NewDecoder(resp.Body).Decode(&accrualResponse)
@@ -112,6 +112,7 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 		return
 	}
 
+	// Отправка запроса к системе расчета
 	accrualResponse, err := sendRequestToAccrualSystem(orderNumber, cfg)
 	if err != nil {
 		logger.Error("Ошибка при запросе к системе расчёта баллов", zap.Error(err))
