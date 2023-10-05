@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/go-loyalty-program.git/internal/config"
+	"github.com/egosha7/go-loyalty-program.git/internal/db/queries"
 	"github.com/egosha7/go-loyalty-program.git/internal/helpers"
 	"github.com/jackc/pgx/v4" // Драйвер PostgreSQL
 	"go.uber.org/zap"
@@ -64,7 +65,7 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 	user := cookie.Value
 
 	var userID int
-	err = conn.QueryRow(r.Context(), "SELECT user_id FROM users WHERE login = $1", user).Scan(&userID)
+	userID, err = queries.SelectUserIDByLogin(r.Context(), conn, user)
 	if err != nil {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
@@ -96,7 +97,7 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 
 	// Проверка уникальности номера заказа для данного пользователя
 	var existingUser int
-	err = conn.QueryRow(r.Context(), "SELECT user_id FROM orders WHERE order_number = $1", orderNumber).Scan(&existingUser)
+	existingUser, err = queries.SelectUserIDByOrderNumber(r.Context(), conn, orderNumber)
 	if err != nil && err != pgx.ErrNoRows {
 		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
@@ -124,26 +125,20 @@ func OrdersHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, cfg *
 
 	if accrualResponse != nil {
 		// Используем accrualResponse если он не равен nil
-		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, order_status, timestamp, order_accural) VALUES ($1, $2, $3, $4, $5)",
-			orderNumber, userID, accrualResponse.Status, currentTime.Format(time.RFC3339), accrualResponse.Accrual)
-		if err != nil {
+		if err := queries.InsertOrder(r.Context(), conn, orderNumber, userID, accrualResponse.Status, currentTime, accrualResponse.Accrual); err != nil {
 			logger.Error("Ошибка при добавлении номера заказа в базу данных", zap.Error(err))
 			http.Error(w, "Ошибка при добавлении номера заказа в базу данных", http.StatusInternalServerError)
 			return
 		}
 
-		_, err = conn.Exec(r.Context(), "UPDATE loyalty_balance SET points = points + $1 WHERE user_id = $2",
-			accrualResponse.Accrual, userID)
-		if err != nil {
+		if err := queries.UpdateLoyaltyBalance(r.Context(), conn, userID, accrualResponse.Accrual); err != nil {
 			logger.Error("Ошибка при обновлении баланса", zap.Error(err))
 			http.Error(w, "Ошибка при обновлении баланса", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		// Не используем accrualResponse если он равен nil
-		_, err = conn.Exec(r.Context(), "INSERT INTO orders (order_number, user_id, order_status, timestamp) VALUES ($1, $2, $3, $4)",
-			orderNumber, userID, "NEW", currentTime.Format(time.RFC3339))
-		if err != nil {
+		if err := queries.InsertOrder(r.Context(), conn, orderNumber, userID, "NEW", currentTime, 0.0); err != nil {
 			logger.Error("Ошибка при добавлении номера заказа в базу данных", zap.Error(err))
 			http.Error(w, "Ошибка при добавлении номера заказа в базу данных", http.StatusInternalServerError)
 			return
