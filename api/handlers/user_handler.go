@@ -42,7 +42,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 		logger.Error("Ошибка запроса к базе данных", zap.Error(err))
 		http.Error(w, "Ошибка запроса к базе данных", http.StatusInternalServerError)
 	}
-	if isUnique {
+	if !isUnique {
 		logger.Info("Пользователь с таким логином уже существует", zap.String("login", user.Login))
 		http.Error(w, "Пользователь с таким логином уже существует", http.StatusConflict)
 		return

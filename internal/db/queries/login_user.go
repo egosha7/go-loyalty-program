@@ -11,7 +11,10 @@ func CheckUniqueLogin(ctx context.Context, conn *pgx.Conn, login string) (bool, 
 	if err != nil {
 		return false, err
 	}
-	return existingUser == "", nil
+	if existingUser != "" {
+		return false, nil
+	}
+	return true, nil
 }
 
 func InsertUser(ctx context.Context, conn *pgx.Conn, login string, hashedPassword []byte) (int, error) {
