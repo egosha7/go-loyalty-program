@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/egosha7/go-loyalty-program.git/internal/db/queries"
 	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
@@ -36,14 +37,11 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 	}
 
 	// Проверка, что логин уникальный
-	var existingUser string
-	err = conn.QueryRow(r.Context(), "SELECT login FROM users WHERE login = $1", user.Login).Scan(&existingUser)
-	if err != nil && err != pgx.ErrNoRows {
-		logger.Error("Ошибка при выполнении запроса к базе данных", zap.Error(err))
-		http.Error(w, "Ошибка при выполнении запроса к базе данных", http.StatusInternalServerError)
-		return
+	isUnique, err := queries.CheckUniqueLogin(r.Context(), conn, user.Login)
+	if err != nil {
+		// Обработка ошибок
 	}
-	if existingUser != "" {
+	if !isUnique {
 		logger.Info("Пользователь с таким логином уже существует", zap.String("login", user.Login))
 		http.Error(w, "Пользователь с таким логином уже существует", http.StatusConflict)
 		return
@@ -58,18 +56,16 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn, logger
 	}
 
 	// Вставка нового пользователя в таблицу users и получение user_id
-	var userID int
-	err = conn.QueryRow(r.Context(), "INSERT INTO users (login, password) VALUES ($1, $2) RETURNING user_id", user.Login, hashedPassword).Scan(&userID)
+	userID, err := queries.InsertUser(r.Context(), conn, user.Login, hashedPassword)
 	if err != nil {
-		// Обработка ошибки
-		http.Error(w, "Ошибка при регистрации пользователя", http.StatusInternalServerError)
+		logger.Error("Ошибка при добавлении нового пользователя в таблицу users", zap.Error(err))
+		http.Error(w, "Ошибка при добавлении нового пользователя в таблицу users", http.StatusInternalServerError)
 		return
 	}
 
 	// Вставка записи в таблицу loyalty_balance с начальными баллами (0.0)
-	_, err = conn.Exec(r.Context(), "INSERT INTO loyalty_balance (user_id, points) VALUES ($1, $2)", userID, 0.0)
-	if err != nil {
-		// Обработка ошибки
+	if err := queries.InsertLoyaltyBalance(r.Context(), conn, userID); err != nil {
+		logger.Error("Ошибка при добавлении начальных баллов в loyalty_balance", zap.Error(err))
 		http.Error(w, "Ошибка при добавлении начальных баллов в loyalty_balance", http.StatusInternalServerError)
 		return
 	}
@@ -102,8 +98,8 @@ func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	}
 
 	// Получение хэшированного пароля из базы данных по логину
-	var hashedPassword string
-	err = conn.QueryRow(r.Context(), "SELECT password FROM users WHERE login = $1", user.Login).Scan(&hashedPassword)
+	// Вызовите функцию запроса из вашего пакета db/queries
+	hashedPassword, err := queries.LoginUser(r.Context(), conn, user.Login)
 	if err == pgx.ErrNoRows {
 		http.Error(w, "Неверная пара логин/пароль", http.StatusUnauthorized)
 		return
